@@ -273,15 +273,4 @@ GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./credentials.json
    http://localhost:3000
    ```
 
----
 
-## 📖 Dokumentasi Lanjutan
-
-Bagi pengembang yang ingin mempelajari detail internal arsitektur streaming, penanganan token OAuth2, atau mekanisme resumable upload:
-👉 Baca selengkapnya di [README.developer.md](./README.developer.md).
-
----
-
-## 📄 Lisensi
-
-Proyek ini dibuat untuk keperluan magang & pengembangan pribadi. Silakan gunakan dan kembangkan sesuai kebutuhan Anda.
