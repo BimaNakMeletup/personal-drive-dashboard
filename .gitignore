@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Secrets & Local Tokens (SANGAT PENTING: Jangan sampai ter-commit ke Git)
+.env
+.env.local
+.tokens.json
+README.developer.md
+
+# Logs & Temp
+*.log
+.DS_Store
+Thumbs.db

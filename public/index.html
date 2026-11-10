@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Drive Dashboard</title>
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="nav-brand-icon">
+        <i data-lucide="hard-drive"></i>
+      </div>
+      <span>Personal Drive</span>
+      <span class="status-pill">
+        <span class="status-dot"></span>
+        Live
+      </span>
+    </div>
+
+    <!-- Search Input -->
+    <div class="search-box">
+      <i data-lucide="search"></i>
+      <input type="text" id="global-search" class="search-input" placeholder="Cari berkas atau folder...">
+      <span class="search-shortcut">Ctrl K</span>
+    </div>
+
+    <!-- User / Storage / Actions -->
+    <div class="nav-actions">
+      <!-- Storage Quota -->
+      <div class="storage-badge" id="storage-container">
+        <div class="storage-badge-top">
+          <span>Penyimpanan</span>
+          <span id="storage-text">Memuat...</span>
+        </div>
+        <div class="storage-bar-bg">
+          <div class="storage-bar-fill" id="storage-bar-fill"></div>
+        </div>
+      </div>
+
+      <!-- User Profile -->
+      <div class="user-profile" id="user-profile-box">
+        <img src="https://api.dicebear.com/7.x/identicon/svg?seed=gdrive" alt="User Avatar" class="user-avatar" id="user-avatar">
+        <div class="user-info">
+          <span class="user-name" id="user-name">Google Drive</span>
+          <span class="user-email" id="user-email">Hubungkan akun Anda</span>
+        </div>
+      </div>
+
+      <!-- Auth Controls -->
+      <button id="btn-connect-google" class="btn btn-primary btn-sm" style="display: none;">
+        <i data-lucide="log-in"></i> Masuk Google
+      </button>
+      <button id="btn-logout" class="btn btn-secondary btn-sm" style="display: none;">
+        <i data-lucide="log-out"></i> Keluar
+      </button>
+    </div>
+  </header>
+
+  <!-- Banner: Belum Dikonfigurasi di .env -->
+  <div id="unconfigured-alert" style="display: none; padding: 2.5rem; text-align: center; max-width: 720px; margin: 4rem auto; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+    <i data-lucide="settings" style="width: 56px; height: 56px; color: var(--accent); margin-bottom: 1rem;"></i>
+    <h2 style="font-size: 1.5rem; margin-bottom: 0.75rem;">Konfigurasi Google OAuth Diperlukan</h2>
+    <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem;">
+      Aplikasi belum mendeteksi <strong>GOOGLE_CLIENT_ID</strong> dan <strong>GOOGLE_CLIENT_SECRET</strong> di file <code>.env</code> Anda.<br>
+      Silakan buka file <code>.env</code> dan lengkapi kredensial Google Cloud Console Anda agar dashboard dapat terhubung.
+    </p>
+    <div style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-sm); text-align: left; font-family: monospace; font-size: 0.85rem; color: #38bdf8; margin-bottom: 1.5rem;">
+      GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com<br>
+      GOOGLE_CLIENT_SECRET=your_client_secret<br>
+      GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/callback
+    </div>
+    <button class="btn btn-secondary" onclick="window.location.reload();">
+      <i data-lucide="refresh-cw"></i> Muat Ulang Halaman
+    </button>
+  </div>
+
+  <!-- Banner: Konfigurasi Ada tapi Belum Login -->
+  <div id="auth-alert" style="display: none; padding: 3rem 2rem; text-align: center; max-width: 600px; margin: 5rem auto; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+    <i data-lucide="cloud" style="width: 64px; height: 64px; color: var(--accent); margin-bottom: 1rem;"></i>
+    <h2 style="font-size: 1.6rem; margin-bottom: 0.75rem;">Hubungkan ke Google Drive</h2>
+    <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;">
+      Klik tombol di bawah untuk masuk dengan akun Google Anda dan memberikan akses pengelolaan Google Drive secara lokal.
+    </p>
+    <button id="btn-connect-banner" class="btn btn-primary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
+      <i data-lucide="log-in"></i> Masuk dengan Google
+    </button>
+  </div>
+
+  <!-- Main App Layout -->
+  <div class="app-container" id="app-container" style="display: none;">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-section-title">Navigasi Utama</div>
+        <ul class="sidebar-menu">
+          <li class="sidebar-item active" id="nav-folders" onclick="DriveApp.loadDashboard();">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <i data-lucide="folder-check" style="width: 18px; height: 18px;"></i>
+              <span>Folder Terhubung</span>
+            </div>
+          </li>
+          <li class="sidebar-item" id="nav-logs" onclick="DriveApp.loadActivityLogs();">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <i data-lucide="history" style="width: 18px; height: 18px;"></i>
+              <span>Log Aktivitas</span>
+            </div>
+            <span class="badge" id="log-count-badge" style="display: none;">0</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Quick Bookmarks / Folder Shortcuts -->
+      <div>
+        <div class="sidebar-section-title">Daftar Folder Aktif</div>
+        <ul class="sidebar-menu bookmark-list" id="bookmark-list">
+          <!-- Rendered via JS -->
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Action Toolbar -->
+      <section class="action-bar">
+        <div class="action-buttons">
+          <!-- Hubungkan via Link Drive -->
+          <button id="btn-open-drive-link" class="btn btn-secondary">
+            <i data-lucide="link"></i> Hubungkan Link Drive
+          </button>
+
+          <!-- Buat Folder Baru -->
+          <button id="btn-new-folder" class="btn btn-secondary">
+            <i data-lucide="folder-plus"></i> Folder Baru
+          </button>
+
+          <!-- Upload Berkas -->
+          <button id="btn-upload-file" class="btn btn-primary">
+            <i data-lucide="upload-cloud"></i> Upload Berkas
+          </button>
+          <input type="file" id="file-upload-input" multiple style="display: none;">
+        </div>
+
+        <!-- View Controls (Grid / List) -->
+        <div class="view-toggles">
+          <button id="view-grid-btn" class="view-btn active" title="Tampilan Kisi (Grid)">
+            <i data-lucide="grid"></i>
+          </button>
+          <button id="view-list-btn" class="view-btn" title="Tampilan Daftar (List)">
+            <i data-lucide="list"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- Breadcrumbs Bar -->
+      <section class="breadcrumbs-bar">
+        <div class="breadcrumbs" id="breadcrumbs">
+          <span class="crumb-current">My Drive</span>
+        </div>
+        <a href="#" target="_blank" id="current-drive-link" class="open-in-drive-link" style="display: none;">
+          <i data-lucide="external-link"></i> Buka di Google Drive
+        </a>
+      </section>
+
+      <!-- Dropzone & File Explorer Area -->
+      <section class="dropzone-container" id="dropzone">
+        <!-- Drag & Drop Visual Overlay -->
+        <div class="drag-overlay" id="drag-overlay">
+          <i data-lucide="upload-cloud" style="width: 56px; height: 56px;"></i>
+          <h2>Lepaskan berkas di sini untuk mengunggah</h2>
+        </div>
+
+        <!-- Content Listing (Folders & Files) -->
+        <div id="file-explorer-content">
+          <!-- Dinamis via JS -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. Modal Buka Folder via Link Google Drive -->
+  <div class="modal-backdrop" id="open-link-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="link"></i> Buka Folder via Link Google Drive</h3>
+        <button class="modal-close-btn" id="open-link-close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="drive-link-input">Link Folder Google Drive</label>
+          <input type="text" id="drive-link-input" class="form-input" placeholder="https://drive.google.com/drive/folders/1ABC_xyz-123...">
+          <small style="color: var(--text-dim); font-size: 0.8rem; margin-top: 0.25rem;">
+            Tempelkan link folder Google Drive yang ingin Anda hubungkan ke dashboard ini.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="open-link-cancel">Batal</button>
+        <button class="btn btn-primary" id="open-link-submit">Hubungkan Folder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal Buat Folder Baru -->
+  <div class="modal-backdrop" id="new-folder-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="folder-plus"></i> Buat Folder Baru</h3>
+        <button class="modal-close-btn" id="new-folder-close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="new-folder-name">Nama Folder</label>
+          <input type="text" id="new-folder-name" class="form-input" placeholder="Masukkan nama folder...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="new-folder-parent-link">Tujuan Induk Folder (Opsional Link Drive)</label>
+          <input type="text" id="new-folder-parent-link" class="form-input" placeholder="Kosongkan jika di dalam folder saat ini, atau paste link folder induk...">
+          <small style="color: var(--text-dim); font-size: 0.8rem;">
+            Biarkan kosong untuk membuat di dalam folder yang sedang Anda buka saat ini.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="new-folder-cancel">Batal</button>
+        <button class="btn btn-primary" id="new-folder-submit">Buat Folder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Modal Hasil Pembuatan Folder (Menampilkan Link Google Drive) -->
+  <div class="modal-backdrop" id="folder-result-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="check-circle" style="color: var(--success);"></i> Folder Berhasil Dibuat!</h3>
+        <button class="modal-close-btn" id="folder-result-close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          Folder baru Anda telah dibuat di Google Drive. Berikut adalah link langsung ke folder tersebut:
+        </p>
+        <div class="form-group">
+          <label class="form-label">Link Google Drive</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="created-folder-link" class="form-input" readonly>
+            <button class="btn btn-secondary" id="created-folder-copy" title="Salin Link">
+              <i data-lucide="copy"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="folder-result-close-btn" onclick="document.getElementById('folder-result-modal').classList.remove('active');">Tutup</button>
+        <button class="btn btn-primary" id="created-folder-open">
+          <i data-lucide="external-link"></i> Buka di Google Drive
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Modal Pratinjau Berkas (Preview) -->
+  <div class="modal-backdrop" id="preview-modal">
+    <div class="modal-card preview-modal-card">
+      <div class="modal-header">
+        <h3 id="preview-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 500px;">Pratinjau Berkas</h3>
+        <button class="modal-close-btn" id="preview-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="preview-body" id="preview-body">
+        <!-- Rendered via JS -->
+      </div>
+      <div class="modal-footer">
+        <a href="#" target="_blank" class="btn btn-secondary" id="preview-drive-btn">
+          <i data-lucide="external-link"></i> Buka di Google Drive
+        </a>
+        <button class="btn btn-primary" id="preview-download-btn">
+          <i data-lucide="download"></i> Download Berkas
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Drive Style Floating Upload Widget -->
+  <div class="gdrive-upload-widget" id="gdrive-upload-widget">
+    <div class="gdrive-upload-header">
+      <div class="gdrive-upload-title" id="gdrive-upload-title">
+        <i data-lucide="upload-cloud" style="width: 18px; height: 18px; color: var(--accent);"></i>
+        <span id="gdrive-upload-title-text">Mengunggah berkas...</span>
+      </div>
+      <div class="gdrive-upload-controls">
+        <button class="widget-control-btn" id="gdrive-upload-toggle" title="Kecilkan / Perbesar">
+          <i data-lucide="chevron-down" id="gdrive-upload-toggle-icon"></i>
+        </button>
+        <button class="widget-control-btn" id="gdrive-upload-close" title="Tutup">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+    </div>
+    <div class="gdrive-upload-body" id="gdrive-upload-body">
+      <!-- Item list rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/js/api.js"></script>
+  <script src="/js/logger.js"></script>
+  <script src="/js/preview.js"></script>
+  <script src="/js/upload.js"></script>
+  <script src="/js/drive.js"></script>
+  <script>
+    // Initialize lucide icons
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
